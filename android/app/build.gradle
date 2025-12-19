@@ -29,6 +29,7 @@ if (flutterVersionName == null) {
 
 
 android {
+    namespace "com.example.tensionceilingapp" // <-- Добавьте эту строку
     compileSdkVersion 34
     ndkVersion flutter.ndkVersion
 
