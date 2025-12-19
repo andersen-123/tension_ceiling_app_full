@@ -6,45 +6,69 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-      
+
+      # 🔧 1. Явная установка Android SDK и принятие лицензий (основное исправление)
+      - name: Setup Android SDK with licenses
+        uses: android-actions/setup-android@v3
+        with:
+          # Явно указываем необходимые компоненты для Flutter
+          packages: |
+            platform-tools
+            platforms;android-36      # Требуется вашими плагинами
+            build-tools;34.0.0        # Совместимая версия
+            cmdline-tools;latest
+            cmake;3.22.1              # Конкретная версия, которая запрашивалась
+            ndk;25.1.8937393          # Стабильная версия NDK
+
+      # 📝 2. Двойное подтверждение лицензий (ключевой шаг для исправления ошибки)
+      - name: Accept Android Licenses
+        run: |
+          # Способ 1: Через yes и sdkmanager (наиболее надежный)
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          
+          # Способ 2: Создание файлов лицензий (резервный метод)
+          mkdir -p $ANDROID_HOME/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          
+          echo "✅ Лицензии Android SDK приняты"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.5'
           channel: 'stable'
-      
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      
-      - name: Accept Android Licenses
+
+      # 🧹 3. Полная очистка и проверка зависимостей
+      - name: Clean and get dependencies
         run: |
-          mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/google-gdk-license
-      
-      - name: Install dependencies
-        run: flutter pub get
-      
+          flutter clean
+          flutter pub get
+          flutter --version
+          echo "Среда готова к сборке"
+
+      # 🏗️ 4. Сборка APK с подробным выводом
       - name: Build APK
         run: |
-          flutter build apk --release --no-tree-shake-icons
-          echo "✅ APK собран успешно!"
-      
-      - name: Upload APK
+          echo "🔄 Начинаю сборку APK..."
+          flutter build apk --release --no-tree-shake-icons --verbose
+          echo "✅ APK успешно собран!"
+
+      # 📦 5. Правильный путь к APK для загрузки артефакта
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tension-ceiling-app-full
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: tension-ceiling-app-apk
+          path: build/app/outputs/apk/release/app-release.apk
           retention-days: 14
