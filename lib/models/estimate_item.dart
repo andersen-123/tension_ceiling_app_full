@@ -1,3 +1,4 @@
+import 'estimate_item.dart';
 class EstimateItem {
   String id;
   String name;
