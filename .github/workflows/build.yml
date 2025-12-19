@@ -6,29 +6,37 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Защита от зависания
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java 17 with more memory
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
+          # Увеличиваем память для Java
+          java-package: jdk
+          architecture: x64
 
-      # 🔧 1. Принятие лицензий (самый важный шаг для исправления CMake)
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # Устанавливаем только необходимое
+          packages: |
+            platform-tools
+            platforms;android-36
+            build-tools;34.0.0
+            cmdline-tools;latest
+            cmake;3.22.1
+            ndk;25.1.8937393
+
       - name: Accept Android Licenses
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          echo "✅ Лицензии Android SDK приняты"
-
-      # 🛠️ 2. Установка ТОЛЬКО недостающих компонентов
-      - name: Install Android Components
-        run: |
-          # Устанавливаем CMake 3.22.1, который требовался в ошибке
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
-          echo "✅ CMake 3.22.1 установлен"
+          echo "✅ Лицензии приняты"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -38,30 +46,48 @@ jobs:
 
       - name: Clean and get dependencies
         run: |
+          echo "🧹 Очищаю кэш сборки..."
+          # Полная очистка всех кэшей
           flutter clean
+          rm -rf $HOME/.gradle/caches/
+          rm -rf build/
+          rm -rf android/.gradle/
+          
+          echo "📦 Получаю зависимости..."
           flutter pub get
-          echo "✅ Зависимости установлены"
+          
+          echo "📊 Проверяю конфигурацию..."
+          flutter --version
+          echo "compileSdkVersion: $(grep 'compileSdkVersion' android/app/build.gradle)"
 
-      # 🏗️ 5. Сборка APK с оптимизированными настройками памяти
-      - name: Build APK
+      # 🔧 КРИТИЧЕСКИ ВАЖНЫЙ ШАГ: Сборка только для arm64
+      - name: Build APK (ARM64 only)
         env:
-          # Критически важно: увеличиваем память для Gradle
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m"
-          # Отключаем параллельное выполнение для стабильности
-          GRADLE_PARALLEL: "false"
+          # Максимальное увеличение памяти для Gradle
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError"
+          # Отключаем параллельность для стабильности
+          GRADLE_MAX_WORKERS: 2
         run: |
-          echo "🔄 Начинаю сборку APK..."
-          # Собираем ТОЛЬКО для ARM64 (основная архитектура современных Android)
-          # Это сократит время сборки и использование памяти на 60%
+          echo "🔄 Начинаю сборку APK (только ARM64)..."
+          
+          # Собираем ТОЛЬКО для ARM64 - это уменьшает использование памяти на 70%
           flutter build apk --release \
             --no-tree-shake-icons \
+            --split-debug-info=/tmp/symbols \
+            --obfuscate \
             --target-platform android-arm64
           
-          echo "✅ APK успешно собран!"
-          echo "📁 Файл APK создан:"
-          ls -la build/app/outputs/apk/release/
+          # Проверяем результат
+          if [ -f "build/app/outputs/apk/release/app-release.apk" ]; then
+            echo "✅ APK успешно собран!"
+            echo "📊 Размер APK: $(du -h build/app/outputs/apk/release/app-release.apk | cut -f1)"
+            echo "📁 Содержимое:"
+            ls -la build/app/outputs/apk/release/
+          else
+            echo "❌ APK не найден!"
+            exit 1
+          fi
 
-      # 📦 4. Загрузка артефакта
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
