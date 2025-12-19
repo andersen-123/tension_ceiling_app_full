@@ -11,6 +11,9 @@ buildscript {
     }
 }
 
+// УДАЛИТЬ весь блок buildscript, который начинается с этой строки.
+// ОСТАВИТЬ все, что идет после него.
+
 allprojects {
     repositories {
         google()
