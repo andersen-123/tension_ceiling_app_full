@@ -17,23 +17,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 🔧 ИСПРАВЛЕННЫЙ БЛОК: Правильный формат списка пакетов
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-36
-            build-tools;34.0.0
-            cmdline-tools;latest
-            cmake;3.22.1
-            ndk;25.1.8937393
-
-      # 📝 Принятие лицензий (обязательный шаг)
+      # 🔧 1. Принятие лицензий (самый важный шаг для исправления CMake)
       - name: Accept Android Licenses
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
           echo "✅ Лицензии Android SDK приняты"
+
+      # 🛠️ 2. Установка ТОЛЬКО недостающих компонентов
+      - name: Install Android Components
+        run: |
+          # Устанавливаем CMake 3.22.1, который требовался в ошибке
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+          echo "✅ CMake 3.22.1 установлен"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -45,8 +40,9 @@ jobs:
         run: |
           flutter clean
           flutter pub get
+          echo "✅ Зависимости установлены"
 
-      # 🏗️ Сборка APK
+      # 🏗️ 3. Сборка APK
       - name: Build APK
         run: |
           echo "🔄 Начинаю сборку APK..."
@@ -54,7 +50,7 @@ jobs:
           echo "✅ APK успешно собран!"
           ls -la build/app/outputs/apk/release/
 
-      # 📦 Загрузка артефакта
+      # 📦 4. Загрузка артефакта
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
