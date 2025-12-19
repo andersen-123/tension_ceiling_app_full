@@ -17,31 +17,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 🔧 1. Явная установка Android SDK и принятие лицензий (основное исправление)
-      - name: Setup Android SDK with licenses
+      # 🔧 ИСПРАВЛЕННЫЙ БЛОК: Правильный формат списка пакетов
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # Явно указываем необходимые компоненты для Flutter
           packages: |
             platform-tools
-            platforms;android-36      # Требуется вашими плагинами
-            build-tools;34.0.0        # Совместимая версия
+            platforms;android-36
+            build-tools;34.0.0
             cmdline-tools;latest
-            cmake;3.22.1              # Конкретная версия, которая запрашивалась
-            ndk;25.1.8937393          # Стабильная версия NDK
+            cmake;3.22.1
+            ndk;25.1.8937393
 
-      # 📝 2. Двойное подтверждение лицензий (ключевой шаг для исправления ошибки)
+      # 📝 Принятие лицензий (обязательный шаг)
       - name: Accept Android Licenses
         run: |
-          # Способ 1: Через yes и sdkmanager (наиболее надежный)
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          
-          # Способ 2: Создание файлов лицензий (резервный метод)
-          mkdir -p $ANDROID_HOME/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           echo "✅ Лицензии Android SDK приняты"
 
       - name: Setup Flutter
@@ -50,22 +41,20 @@ jobs:
           flutter-version: '3.38.5'
           channel: 'stable'
 
-      # 🧹 3. Полная очистка и проверка зависимостей
       - name: Clean and get dependencies
         run: |
           flutter clean
           flutter pub get
-          flutter --version
-          echo "Среда готова к сборке"
 
-      # 🏗️ 4. Сборка APK с подробным выводом
+      # 🏗️ Сборка APK
       - name: Build APK
         run: |
           echo "🔄 Начинаю сборку APK..."
-          flutter build apk --release --no-tree-shake-icons --verbose
+          flutter build apk --release --no-tree-shake-icons
           echo "✅ APK успешно собран!"
+          ls -la build/app/outputs/apk/release/
 
-      # 📦 5. Правильный путь к APK для загрузки артефакта
+      # 📦 Загрузка артефакта
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
