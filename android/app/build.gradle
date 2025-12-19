@@ -31,7 +31,12 @@ android {
     namespace "com.example.tensionceilingapp"
     compileSdkVersion 36
     ndkVersion flutter.ndkVersion
-
+    
+    dexOptions {
+        javaMaxHeapSize "4g" // Увеличиваем память для DEX
+        preDexLibraries true // Ускоряем повторную сборку
+    }
+    
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
