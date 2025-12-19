@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'app.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,12 +10,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Tension Ceiling App',
+      title: 'Приложение для смет потолков',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      // Убираем const перед HomeScreen(), чтобы избежать ошибки
-      home: HomeScreen(),
+      home: const Scaffold( // Используем Scaffold напрямую
+        body: Center(
+          child: Text('Приложение готово к сборке!'),
+        ),
+      ),
     );
   }
 }
