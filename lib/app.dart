@@ -1,3 +1,4 @@
+import 'app.dart'; // Добавьте эту строку
 import 'package:flutter/material.dart';
 // Временно удаляем несуществующие импорты
 
