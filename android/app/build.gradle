@@ -1,9 +1,9 @@
-// ДОБАВИТЬ эти строки в САМОЕ НАЧАЛО файла, перед остальным кодом:
 plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -27,9 +27,8 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
-
 android {
-    namespace "com.example.tensionceilingapp" // <-- Добавьте эту строку
+    namespace "com.example.tensionceilingapp"
     compileSdkVersion 34
     ndkVersion flutter.ndkVersion
 
@@ -66,5 +65,6 @@ flutter {
 }
 
 dependencies {
-    
+    // Зависимости, если они есть, указываются здесь.
+    // Пока блок может оставаться пустым.
 }
