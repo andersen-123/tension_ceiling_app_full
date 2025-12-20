@@ -1,4 +1,4 @@
-name: Build Full App APK
+name: Build NEW APP Version
 
 on:
   workflow_dispatch:
@@ -6,69 +6,65 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      # 🔧 1. ПРОСТОЙ И НАДЁЖНЫЙ СПОСОБ: GitHub Actions уже имеет Android SDK
-      #    Нам нужно только принять лицензии и установить недостающий CMake
-      - name: Setup Android SDK
-        run: |
-          echo "🛠️  Настройка Android SDK..."
-          
-          # Принимаем все лицензии (ГЛАВНОЕ ИСПРАВЛЕНИЕ)
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          echo "✅ Лицензии приняты"
-          
-          # Устанавливаем ТОЛЬКО CMake 3.22.1 (который требовался в ошибке)
-          echo "📦 Устанавливаю CMake 3.22.1..."
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
-          echo "✅ CMake установлен"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.38.5'
-          channel: 'stable'
-
-      - name: Clean and get dependencies
-        run: |
-          echo "🧹 Очищаю проект..."
-          flutter clean
-          rm -rf $HOME/.gradle/caches/
-          flutter pub get
-          echo "✅ Зависимости установлены"
-
-      # 🏗️ 2. Сборка ТОЛЬКО для ARM64 (максимальная экономия памяти)
-      - name: Build APK (ARM64 only)
-        env:
-          # Увеличиваем память для Java/Gradle
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4608m"
-          JAVA_OPTS: "-Xmx4608m"
-        run: |
-          echo "🔄 Собираю APK (только ARM64)..."
-          
-          # Критически важно: --target-platform android-arm64
-          flutter build apk --release \
-            --no-tree-shake-icons \
-            --target-platform android-arm64 \
-            --verbose
-          
-          echo "✅ Сборка завершена!"
-          echo "📁 Результат:"
-          ls -la build/app/outputs/apk/release/
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tension-ceiling-app-apk
-          path: build/app/outputs/apk/release/app-release.apk
-          retention-days: 14
+    # 1. Получить СВЕЖИЙ код
+    - name: 📥 Get LATEST code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Получаем всю историю
+        
+    # 2. Настроить Flutter
+    - name: ⚙️ Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.9'
+        
+    # 3. Показать версию приложения
+    - name: 📱 Show app version
+      run: |
+        echo "=== ТЕКУЩАЯ ВЕРСИЯ ПРИЛОЖЕНИЯ ==="
+        grep "version:" pubspec.yaml
+        echo "================================"
+        
+    # 4. Установить зависимости
+    - name: 📦 Install packages
+      run: |
+        echo "=== УСТАНАВЛИВАЮ ЗАВИСИМОСТИ ==="
+        flutter pub get
+        echo "✅ Готово"
+        
+    # 5. ОЧИСТИТЬ всё
+    - name: 🧹 Clean EVERYTHING
+      run: |
+        echo "=== ПОЛНАЯ ОЧИСТКА ==="
+        flutter clean
+        rm -rf build/
+        rm -rf .dart_tool/
+        echo "✅ Всё очищено"
+        
+    # 6. Собрать НОВЫЙ APK
+    - name: 🔨 Build NEW APK
+      run: |
+        echo "=== СОБИРАЮ НОВУЮ ВЕРСИЮ 1.0.8 ==="
+        echo "Время: $(date '+%Y-%m-%d %H:%M:%S')"
+        flutter build apk --release --no-tree-shake-icons
+        echo "✅ НОВЫЙ APK СОБРАН!"
+        
+    # 7. Проверить что НОВОЕ
+    - name: 🔍 Check NEW file
+      run: |
+        echo "=== ПРОВЕРКА ФАЙЛА ==="
+        ls -la build/app/outputs/flutter-apk/
+        echo "💾 Размер нового APK:"
+        du -h build/app/outputs/flutter-apk/app-release.apk
+        echo "🕐 Дата создания:"
+        stat build/app/outputs/flutter-apk/app-release.apk
+        
+    # 8. Загрузить с НОВЫМ именем
+    - name: ⬆️ Upload NEW APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: NEW-VERSION-1.0.8-$(date +%s)
+        path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 1
